@@ -1,127 +1,122 @@
-'use strict';
-var views = require('co-views');
-var parse = require('co-body');
-var monk = require('monk');
-var wrap = require('co-monk');
-var db = monk('localhost/library');
-var co = require('co');
+import { MongoClient, ObjectId } from 'mongodb';
+import { config } from 'dotenv';
 
-var books = wrap(db.get('books'));
+config();
 
-// From lifeofjs
-co(function * () {
-  var books = yield books.find({});
-});
+const client = new MongoClient(process.env.MONGO_CONNECTION_STRING);
 
-var render = views(__dirname + '/../views', {
-  map: {
-    html: 'swig'
-  }
-});
-
-module.exports.home = function * home(next) {
-  if ('GET' != this.method) return yield next;
-  this.body = yield render('layout');
-};
-
-module.exports.list = function * list(next) {
-  if ('GET' != this.method) return yield next;
-  this.body = yield render('list', {
-    'books': yield books.find({})
-  });
-};
-
-// This must be avoided, use ajax in the view.
-module.exports.all = function * all(next) {
-  if ('GET' != this.method) return yield next;
-  this.body = yield books.find({});
-};
-
-module.exports.fetch = function * fetch(id,next) {
-  if ('GET' != this.method) return yield next;
-  // Quick hack.
-  if(id === ""+parseInt(id, 10)){
-    var book = yield books.find({}, {
-      'skip': id - 1,
-      'limit': 1
-    });
-    if (book.length === 0) {
-      this.throw(404, 'book with id = ' + id + ' was not found');
-    }
-    this.body = yield book;
+export async function all(ctx, next) {
+  if ('GET' !== ctx.request.method) {
+    await next();
+    return;
   }
 
-};
+  const query = {};
+  const database = client.db('library');
+  const booksCollection = database.collection('books');
+  const cursor = booksCollection.find(query);
 
-module.exports.add = function * add(data,next) {
-  if ('POST' != this.method) return yield next;
-  var book = yield parse(this, {
-    limit: '1kb'
-  });
-  var inserted = yield books.insert(book);
-  if (!inserted) {
-    this.throw(405, "The book couldn't be added.");
-  }
-  this.body = 'Done!';
-};
-
-module.exports.modify = function * modify(id,next) {
-  if ('PUT' != this.method) return yield next;
-
-  var data = yield parse(this, {
-    limit: '1kb'
-  });
-
-  var book = yield books.find({}, {
-    'skip': id - 1,
-    'limit': 1
-  });
-
-  if (book.length === 0) {
-    this.throw(404, 'book with id = ' + id + ' was not found');
+  // Check we have a match
+  if (await booksCollection.countDocuments(query) === 0) {
+    ctx.response.body('No documents found!');
   }
 
-  var updated = books.update(book[0], {
-    $set: data
+  const result = [];
+
+  await cursor.forEach((doc) => {
+    result.push(doc);
   });
 
-  if (!updated) {
-    this.throw(405, "Unable to update.");
+  ctx.response.body = result;
+}
+
+export async function fetch(ctx, id, next) {
+  if ('GET' !== ctx.request.method) {
+    await next();
+    return;
+  }
+
+  const database = client.db('library');
+  const booksCollection = database.collection('books');
+  const results = await booksCollection.findOne({'_id': new ObjectId(id)});
+
+  if (results === null) {
+    ctx.throw(404, 'book not found');
+  }
+
+  ctx.response.body = results;
+}
+
+export async function add(ctx, next) {
+  if ('POST' !== ctx.request.method) {
+    await next();
+    return;
+  }
+  const database = client.db('library');
+  const booksCollection = database.collection('books');
+  const inserted = await booksCollection.insertOne(ctx.request.body);
+  if (inserted.acknowledged === false) {
+    ctx.throw(405, 'The book couldn\'t be added.');
+  }
+  ctx.response.set('Location', `/api/v1/books/${inserted.insertedId}`);
+  ctx.response.status = 201;
+}
+
+export async function modify(ctx, id, next) {
+  if ('PUT' !== ctx.request.method) {
+    await next();
+    return;
+  }
+
+  const database = client.db('library');
+  const booksCollection = database.collection('books');
+  const book = booksCollection.findOne({'_id': new ObjectId(id)});
+
+  if (book === null) {
+    ctx.throw(404, 'book with id = ' + id + ' was not found');
+  }
+
+  const updated = await booksCollection.updateOne({'_id': new ObjectId(id)}, {
+    $set: ctx.request.body
+  });
+
+  if (updated.acknowledged === false || updated.acknowledged === true && updated.modifiedCount === 0) {
+    ctx.throw(405, 'Unable to update.');
   } else {
-    this.body = "Done";
+    ctx.response.body = 'Done';
   }
-};
+}
 
-module.exports.remove = function * remove(id,next) {
-  if ('DELETE' != this.method) return yield next;
-
-  var book = yield books.find({}, {
-    'skip': id - 1,
-    'limit': 1
-  });
-
-  if (book.length === 0) {
-    this.throw(404, 'book with id = ' + id + ' was not found');
+export async function remove(ctx, id, next) {
+  if ('DELETE' !== ctx.request.method) {
+    await next();
+    return;
   }
 
-  var removed = books.remove(book[0]);
+  const database = client.db('library');
+  const booksCollection = database.collection('books');
+  const book = await booksCollection.findOne({'_id': new ObjectId(id)});
 
-  if (!removed) {
-    this.throw(405, "Unable to delete.");
+  if (book === null) {
+    ctx.throw(404, `book with id = ${id} was not found`);
+  }
+
+  const removed = await booksCollection.deleteOne({'_id': new ObjectId(id)});
+
+  if (removed.acknowledged === false || removed.acknowledged === true && removed.deletedCount === 0) {
+    ctx.throw(405, 'Unable to delete.');
   } else {
-    this.body = "Done";
+    ctx.response.body = 'Done';
   }
+}
 
-};
+export async function head(){
+}
 
-module.exports.head = function *(){
-  return;
-};
+export function options(ctx) {
+  ctx.response.body = 'Allow: HEAD,GET,PUT,DELETE,OPTIONS';
+}
 
-module.exports.options = function *() {
-  this.body = "Allow: HEAD,GET,PUT,DELETE,OPTIONS";
-};
-
-module.exports.trace = function *() {
-  this.body = "Smart! But you can't trace.";
-};
+export function trace(ctx) {
+  ctx.response.body = 'Smart! But you can\'t trace.';
+}

@@ -1,36 +1,25 @@
 'use strict';
-var books = require('./controllers/books');
-var compress = require('koa-compress');
-var logger = require('koa-logger');
-var serve = require('koa-static');
-var route = require('koa-route');
-var koa = require('koa');
-var path = require('path');
-var app = module.exports = koa();
+import * as books from './controllers/books.js';
+import compress from 'koa-compress';
+import logger from 'koa-logger';
+import route from 'koa-route';
+import bodyParser from 'koa-bodyparser';
+import Application from 'koa';
+
+export const app = new Application();
 
 // Logger
-app.use(logger());
+app.use(logger())
+  .use(bodyParser())
+  .use(route.get('/api/v1/books/', books.all))
+  .use(route.get('/api/v1/books/:id', books.fetch))
+  .use(route.post('/api/v1/books/', books.add))
+  .use(route.put('/api/v1/books/:id', books.modify))
+  .use(route.delete('/api/v1/books/:id', books.remove))
+  .use(route.options('/api/v1/books', books.options))
+  .use(route.trace('/api/v1/books', books.trace))
+  .use(route.head('/api/v1/books', books.head))
+  .use(compress())
+  .listen(1337, '0.0.0.0');
 
-app.use(route.get('/', books.home));
-app.use(route.get('/books/', books.all));
-app.use(route.get('/view/books/', books.list));
-app.use(route.get('/books/:id', books.fetch));
-app.use(route.post('/books/', books.add));
-app.use(route.put('/books/:id', books.modify));
-app.use(route.delete('/books/:id', books.remove));
-app.use(route.options('/', books.options));
-app.use(route.trace('/', books.trace));
-app.use(route.head('/', books.head));
-
-
-
-// Serve static files
-app.use(serve(path.join(__dirname, 'public')));
-
-// Compress
-app.use(compress());
-
-if (!module.parent) {
-  app.listen(1337);
-  console.log('listening on port 1337');
-}
+console.log('listening on port 1337');

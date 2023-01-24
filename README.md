@@ -1,28 +1,26 @@
-#koa-REST
+# koa-REST
 
 > REST demo with koa.
 
-This is a simple demo of RESTful API with [koajs](http://koajs.com/) checkout the [live demo](http://lexicon-tactic.codio.io:1337/)
+This is a simple demo of RESTful API with [koajs](http://koajs.com/) and is a forked but modernized version of the one
+[here](https://github.com/hemanth/koa-rest.git)
 
 
 __How to try it?__
 
 ```sh
 
-$ git clone https://github.com/hemanth/koa-rest.git
+$ git clone https://github.com/george-wilson-al/koa-rest.git
 
 $ cd koa-rest
 
 $ mongoimport -d library -c books ./db.json  # Import the DB, makes sure mongod is running.
 
-$ npm install
+$ npm ci
 
 $ npm run start
 
 ```
-
-Open http://localhost:1337 to see the results.
-
 
 ```
 

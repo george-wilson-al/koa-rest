@@ -1,24 +1,17 @@
 /*global describe, it*/
 'use strict';
-var superagent = require('supertest');
-var app = require('../app');
+import superagent from 'supertest';
+import { app } from '../app.js';
 
 function request() {
   return superagent(app.listen());
 }
 
 describe('Routes', function() {
-  describe('GET /', function() {
+  describe('GET Books', function() {
     it('should return 200', function(done) {
       request()
-        .get('/')
-        .expect(200, done);
-    });
-  });
-  describe('GET /books', function() {
-    it('should return 200', function(done) {
-      request()
-        .get('/books')
+        .get('/api/v1/books')
         .expect('Content-Type', /json/)
         .expect(200, done);
     });
@@ -26,7 +19,7 @@ describe('Routes', function() {
   describe('GET /books/notfound', function() {
     it('should return 404', function(done) {
       request()
-        .get('/books/notfound')
+        .get('/api/v1/books/notfound')
         .expect(404, done);
     });
   });
