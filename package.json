@@ -7,11 +7,12 @@
     "node": ">=18.0"
   },
   "scripts": {
-    "start": "node --trace-deprecation app.js",
+    "start": "node app.js",
     "test": "mocha",
     "snyk-protect": "snyk-protect"
   },
   "dependencies": {
+    "@koa/cors": "^4.0.0",
     "dotenv": "^16.0.3",
     "koa": "^2.14.1",
     "koa-bodyparser": "^4.3.0",

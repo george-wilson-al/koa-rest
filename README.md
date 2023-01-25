@@ -3,7 +3,8 @@
 > REST demo with koa.
 
 This is a simple demo of RESTful API with [koajs](http://koajs.com/) and is a forked but modernized version of the one
-[here](https://github.com/hemanth/koa-rest.git)
+[here](https://github.com/hemanth/koa-rest.git). This was intended to be a modern MERN stack application - with modern
+node syntax by substituting `express` for `koa`.
 
 
 __How to try it?__
@@ -14,7 +15,7 @@ $ git clone https://github.com/george-wilson-al/koa-rest.git
 
 $ cd koa-rest
 
-$ mongoimport -d library -c books ./db.json  # Import the DB, makes sure mongod is running.
+$ mongoimport -d dummy -c todos ./db.json  # Import the DB, makes sure mongod is running.
 
 $ npm ci
 

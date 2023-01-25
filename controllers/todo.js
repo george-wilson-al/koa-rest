@@ -4,6 +4,8 @@ import { config } from 'dotenv';
 config();
 
 const client = new MongoClient(process.env.MONGO_CONNECTION_STRING);
+const database = client.db('dummy');
+const collection = database.collection('todos');
 
 export async function all(ctx, next) {
   if ('GET' !== ctx.request.method) {
@@ -12,13 +14,13 @@ export async function all(ctx, next) {
   }
 
   const query = {};
-  const database = client.db('library');
-  const booksCollection = database.collection('books');
-  const cursor = booksCollection.find(query);
+  const cursor = collection.find(query);
 
   // Check we have a match
-  if (await booksCollection.countDocuments(query) === 0) {
-    ctx.response.body('No documents found!');
+  if (await collection.countDocuments(query) === 0) {
+    await next();
+    ctx.response.body = [];
+    return;
   }
 
   const result = [];
@@ -36,9 +38,7 @@ export async function fetch(ctx, id, next) {
     return;
   }
 
-  const database = client.db('library');
-  const booksCollection = database.collection('books');
-  const results = await booksCollection.findOne({'_id': new ObjectId(id)});
+  const results = await collection.findOne({'_id': new ObjectId(id)});
 
   if (results === null) {
     ctx.throw(404, 'book not found');
@@ -52,14 +52,13 @@ export async function add(ctx, next) {
     await next();
     return;
   }
-  const database = client.db('library');
-  const booksCollection = database.collection('books');
-  const inserted = await booksCollection.insertOne(ctx.request.body);
+  const inserted = await collection.insertOne(ctx.request.body);
   if (inserted.acknowledged === false) {
     ctx.throw(405, 'The book couldn\'t be added.');
   }
   ctx.response.set('Location', `/api/v1/books/${inserted.insertedId}`);
   ctx.response.status = 201;
+  ctx.response.body = {'id': inserted.insertedId};
 }
 
 export async function modify(ctx, id, next) {
@@ -68,22 +67,22 @@ export async function modify(ctx, id, next) {
     return;
   }
 
-  const database = client.db('library');
-  const booksCollection = database.collection('books');
-  const book = booksCollection.findOne({'_id': new ObjectId(id)});
+  const book = collection.findOne({'_id': new ObjectId(id)});
 
   if (book === null) {
     ctx.throw(404, 'book with id = ' + id + ' was not found');
   }
 
-  const updated = await booksCollection.updateOne({'_id': new ObjectId(id)}, {
+  const updated = await collection.updateOne({'_id': new ObjectId(id)}, {
     $set: ctx.request.body
   });
 
-  if (updated.acknowledged === false || updated.acknowledged === true && updated.modifiedCount === 0) {
-    ctx.throw(405, 'Unable to update.');
+  console.log(updated);
+
+  if (updated.acknowledged === false || updated.acknowledged === true && updated.matchedCount !== 1) {
+    ctx.throw(405, {'success': false});
   } else {
-    ctx.response.body = 'Done';
+    ctx.response.body = {'success': true};
   }
 }
 
@@ -93,20 +92,18 @@ export async function remove(ctx, id, next) {
     return;
   }
 
-  const database = client.db('library');
-  const booksCollection = database.collection('books');
-  const book = await booksCollection.findOne({'_id': new ObjectId(id)});
+  const book = await collection.findOne({'_id': new ObjectId(id)});
 
   if (book === null) {
     ctx.throw(404, `book with id = ${id} was not found`);
   }
 
-  const removed = await booksCollection.deleteOne({'_id': new ObjectId(id)});
+  const removed = await collection.deleteOne({'_id': new ObjectId(id)});
 
   if (removed.acknowledged === false || removed.acknowledged === true && removed.deletedCount === 0) {
-    ctx.throw(405, 'Unable to delete.');
+    ctx.throw(405, {'success': false});
   } else {
-    ctx.response.body = 'Done';
+    ctx.response.body = {'success': true};
   }
 }
 

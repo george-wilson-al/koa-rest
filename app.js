@@ -1,24 +1,25 @@
-'use strict';
-import * as books from './controllers/books.js';
+import * as books from './controllers/todo.js';
 import compress from 'koa-compress';
 import logger from 'koa-logger';
 import route from 'koa-route';
 import bodyParser from 'koa-bodyparser';
 import Application from 'koa';
+import cors from '@koa/cors';
 
 export const app = new Application();
 
 // Logger
 app.use(logger())
   .use(bodyParser())
-  .use(route.get('/api/v1/books/', books.all))
-  .use(route.get('/api/v1/books/:id', books.fetch))
-  .use(route.post('/api/v1/books/', books.add))
-  .use(route.put('/api/v1/books/:id', books.modify))
-  .use(route.delete('/api/v1/books/:id', books.remove))
-  .use(route.options('/api/v1/books', books.options))
-  .use(route.trace('/api/v1/books', books.trace))
-  .use(route.head('/api/v1/books', books.head))
+  .use(cors())
+  .use(route.get('/api/v1/todos/', books.all))
+  .use(route.get('/api/v1/todos/:id', books.fetch))
+  .use(route.post('/api/v1/todos/', books.add))
+  .use(route.put('/api/v1/todos/:id', books.modify))
+  .use(route.delete('/api/v1/todos/:id', books.remove))
+  .use(route.options('/api/v1/todos', books.options))
+  .use(route.trace('/api/v1/todos', books.trace))
+  .use(route.head('/api/v1/todos', books.head))
   .use(compress())
   .listen(1337, '0.0.0.0');
 
